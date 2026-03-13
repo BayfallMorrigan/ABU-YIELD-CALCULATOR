@@ -4,114 +4,348 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Bayfall Morrigan – Scale-In Simulator</title>
-
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f9f8f6;
+      --bg2:      #f2f0ec;
+      --black:    #080808;
+      --mid:      #7a7670;
+      --rule:     #ccc9c2;
+      --rule-mid: #b5b2aa;
+      --gold:     #8a6a2a;
+      --gold-dim: rgba(138,106,42,0.1);
+      --accent:   #2a4f8a;
+      --live:     #3d7a50;
+      --display:  'Cormorant Garamond', Georgia, serif;
+      --body:     'EB Garamond', Georgia, serif;
+    }
+
+    html { scroll-behavior: smooth; }
     body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      margin: 0;
-      padding: 20px;
+      background: var(--bg);
+      color: var(--black);
+      font-family: var(--body);
+      font-size: 17px;
+      line-height: 1.8;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
     }
-    .container {
-      max-width: 900px;
-      margin: auto;
-      background: #1e293b;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+
+    /* subtle grid */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.022) 1px, transparent 1px);
+      background-size: 52px 52px;
     }
-    h1 { margin-top: 0; font-size: 22px; }
-    label { display: block; margin-top: 12px; font-size: 14px; }
-    input, select, button {
+
+    /* ── Header ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--bg);
+      border-bottom: 1px solid var(--rule);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 52px; height: 72px;
+    }
+    .logo {
+      font-family: var(--display);
+      font-size: 1.1rem; font-weight: 400;
+      letter-spacing: 0.06em; color: var(--black);
+      text-decoration: none;
+    }
+    .logo span {
+      font-family: var(--body);
+      font-size: 0.6rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--mid);
+      margin-left: 14px;
+    }
+    .header-tag {
+      font-family: var(--body);
+      font-size: 0.62rem; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--mid);
+    }
+
+    /* ── Page shell ── */
+    .page {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 64px 52px 100px;
+    }
+
+    /* ── Eyebrow + Title ── */
+    .eyebrow {
+      font-family: var(--body);
+      font-size: 0.62rem; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--mid);
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 300; line-height: 1.1;
+      color: var(--black); margin-bottom: 8px;
+    }
+    h1 em { font-style: italic; font-weight: 300; }
+    .subtitle {
+      font-family: var(--body);
+      font-size: 0.95rem; color: var(--mid);
+      margin-bottom: 52px;
+    }
+
+    /* ── Horizontal rule ── */
+    hr {
+      border: none; border-top: 1px solid var(--rule);
+      margin: 40px 0;
+    }
+
+    /* ── Form layout ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px 40px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .page { padding: 40px 20px 80px; }
+      header { padding: 0 20px; }
+    }
+
+    .field {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    label {
+      font-family: var(--body);
+      font-size: 0.6rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--mid);
+    }
+    input, select {
+      font-family: var(--body);
+      font-size: 1rem; color: var(--black);
+      background: transparent;
+      border: none; border-bottom: 1px solid var(--rule-mid);
+      padding: 6px 0;
+      outline: none;
+      transition: border-color 0.2s;
       width: 100%;
-      padding: 8px;
-      margin-top: 4px;
-      border-radius: 6px;
-      border: none;
-      font-size: 14px;
+      -webkit-appearance: none; appearance: none;
     }
-    button {
-      background: #0ea5e9;
-      color: #fff;
-      margin-top: 16px;
+    input:focus, select:focus {
+      border-color: var(--gold);
+    }
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a7670'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 4px center;
+      padding-right: 20px;
       cursor: pointer;
-      font-weight: bold;
     }
-    .results {
-      margin-top: 20px;
-      padding: 16px;
-      background: #0f172a;
-      border-radius: 8px;
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* ── Run button ── */
+    .run-btn {
+      font-family: var(--body);
+      font-size: 0.7rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--bg);
+      background: var(--black);
+      border: 1px solid var(--black);
+      padding: 13px 36px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      border-radius: 1px;
     }
-    canvas { margin-top: 20px; background: #0f172a; border-radius: 8px; }
+    .run-btn:hover {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+
+    /* ── Results ── */
+    .results-section {
+      display: none;
+      animation: fadeUp 0.5s ease forwards;
+    }
+    .results-section.visible { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* stat grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      border: 1px solid var(--rule);
+      margin-bottom: 40px;
+      background: var(--rule);
+    }
+    @media (max-width: 600px) {
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat-cell {
+      background: var(--bg);
+      padding: 20px 22px;
+    }
+    .stat-cell.highlight { background: var(--bg2); }
+    .stat-label {
+      font-family: var(--body);
+      font-size: 0.56rem; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--mid);
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--display);
+      font-size: 1.45rem; font-weight: 400;
+      color: var(--black); line-height: 1.1;
+    }
+    .stat-value.gold  { color: var(--gold); }
+    .stat-value.navy  { color: var(--accent); }
+    .stat-value.green { color: var(--live); }
+
+    /* insight block */
+    .insight {
+      border-left: 2px solid var(--gold);
+      padding: 14px 20px;
+      margin-bottom: 40px;
+      background: var(--gold-dim);
+    }
+    .insight p {
+      font-family: var(--body);
+      font-size: 0.9rem; color: var(--mid);
+      line-height: 1.7;
+    }
+    .insight strong { color: var(--black); font-weight: 500; }
+
+    /* chart section */
+    .chart-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: center;
+    }
+    @media (max-width: 600px) {
+      .chart-wrap { grid-template-columns: 1fr; }
+    }
+    .chart-container {
+      max-width: 220px; margin: 0 auto;
+    }
+    .chart-legend {
+      font-family: var(--body);
+      font-size: 0.85rem; color: var(--mid);
+    }
+    .legend-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .legend-label { color: var(--black); }
+    .legend-val { margin-left: auto; font-style: italic; }
+
+    /* section heading */
+    .section-heading {
+      font-family: var(--display);
+      font-size: 1.3rem; font-weight: 400; font-style: italic;
+      color: var(--black); margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Scale-In Account Simulator</h1>
 
-    <label>Target Balance ($)</label>
-    <input id="targetBalance" type="number" value="4500">
+<header>
+  <a class="logo" href="https://www.bayfallmorrigan.com/">Bayfall Morrigan <span>/ internal tools</span></a>
+  <div class="header-tag">Scale-In Simulator</div>
+</header>
 
-    <label>Weekly Deposit ($)</label>
-    <input id="weeklyDeposit" type="number" value="150">
+<div class="page">
 
-    <label>Lock Term</label>
-    <select id="lockTerm">
-      <option value="3">3 Months</option>
-      <option value="6" selected>6 Months</option>
-      <option value="12">12 Months</option>
-    </select>
+  <div class="eyebrow">Capital Tools</div>
+  <h1>Scale-In Account <em>Simulator</em></h1>
+  <p class="subtitle">Model your build-up trajectory and projected lock returns.</p>
 
-    <button onclick="runSimulation()">Run Simulation</button>
+  <hr>
 
-    <div class="results" id="resultsBox">
-      <p>Enter values and run the simulation.</p>
+  <div class="form-grid">
+    <div class="field">
+      <label for="targetBalance">Target Balance ($)</label>
+      <input id="targetBalance" type="number" value="4500" placeholder="4500">
     </div>
-
-    <canvas id="pieChart" height="180"></canvas>
+    <div class="field">
+      <label for="weeklyDeposit">Weekly Deposit ($)</label>
+      <input id="weeklyDeposit" type="number" value="150" placeholder="150">
+    </div>
+    <div class="field">
+      <label for="lockTerm">Lock Term</label>
+      <select id="lockTerm">
+        <option value="3">3 Months</option>
+        <option value="6" selected>6 Months</option>
+        <option value="12">12 Months</option>
+      </select>
+    </div>
   </div>
 
+  <button class="run-btn" onclick="runSimulation()">Run Simulation</button>
+
+  <hr>
+
+  <div class="results-section" id="resultsSection">
+
+    <div class="section-heading">Build-up Summary</div>
+    <div class="stat-grid" id="statGrid"></div>
+
+    <div class="insight" id="insightBlock"></div>
+
+    <div class="section-heading">Composition at Target</div>
+    <div class="chart-wrap">
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="chart-legend" id="chartLegend"></div>
+    </div>
+
+  </div>
+
+</div>
+
 <script>
-/* --- Build-up yield brackets (monthly) --- */
 function getBuildRate(target, weekly) {
   const weeklyPct = (weekly / target) * 100;
-
-  if (weeklyPct >= 10) return 0.04;    // 4.0% monthly
-  if (weeklyPct >= 5)  return 0.032;   // 3.2% monthly
-  if (weeklyPct >= 2)  return 0.024;   // 2.4% monthly
-  if (weeklyPct >= 0.75) return 0.016; // 1.6% monthly
-  return 0.01; // 1.0% monthly
+  if (weeklyPct >= 10) return 0.04;
+  if (weeklyPct >= 5)  return 0.032;
+  if (weeklyPct >= 2)  return 0.024;
+  if (weeklyPct >= 0.75) return 0.016;
+  return 0.01;
 }
 
-/* --- Lock contract yield (monthly) --- */
 function getScaleInLockYield(lockTermMonths, weeksToTarget) {
-  const baseRates = {3: 0.05, 6: 0.065, 12: 0.08}; // monthly base yields
+  const baseRates = { 3: 0.05, 6: 0.065, 12: 0.08 };
   const base = baseRates[lockTermMonths] ?? 0.06;
-
-  const maxBoost = 0.03;        // +3% monthly max
-  const fullBoostWeeks = 54;    // 1 year to unlock full boost
-
+  const maxBoost = 0.03;
+  const fullBoostWeeks = 54;
   const progress = Math.min(weeksToTarget / fullBoostWeeks, 1);
-  const boost = maxBoost * progress;
-
-  return base + boost; // final monthly yield
+  return base + maxBoost * progress;
 }
 
-/* --- Main Simulation --- */
+function fmt(n) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function pct(n) { return (n * 100).toFixed(2) + '%'; }
+
 function runSimulation() {
-  const target = parseFloat(document.getElementById('targetBalance').value);
-  const weekly = parseFloat(document.getElementById('weeklyDeposit').value);
+  const target     = parseFloat(document.getElementById('targetBalance').value);
+  const weekly     = parseFloat(document.getElementById('weeklyDeposit').value);
   const lockMonths = parseInt(document.getElementById('lockTerm').value);
 
-  if (!target || !weekly) {
-    alert("Enter valid numbers.");
-    return;
-  }
+  if (!target || !weekly) { alert('Please enter valid numbers.'); return; }
 
-  const buildRate = getBuildRate(target, weekly); // monthly
+  const buildRate = getBuildRate(target, weekly);
   let balance = 0, deposits = 0, yields = 0, week = 0;
 
   while (balance < target && week < 520) {
@@ -121,9 +355,9 @@ function runSimulation() {
       deposits += weekly;
     }
     if (week % 4 === 0) {
-      const yieldAmt = balance * buildRate;
-      balance += yieldAmt;
-      yields += yieldAmt;
+      const y = balance * buildRate;
+      balance += y;
+      yields += y;
     }
   }
 
@@ -132,50 +366,84 @@ function runSimulation() {
 
   let balanceAfterLock = balance;
   for (let m = 0; m < lockMonths; m++) {
-    const yieldAmt = balanceAfterLock * lockRate;
-    balanceAfterLock += yieldAmt;
+    balanceAfterLock += balanceAfterLock * lockRate;
   }
 
   const depositsPct = (deposits / balance) * 100;
-  const yieldsPct = (yields / balance) * 100;
+  const yieldsPct   = (yields / balance) * 100;
 
-  // Summary
-  const res = document.getElementById("resultsBox");
-  res.innerHTML = `
-    <p><strong>Target:</strong> $${target.toLocaleString()}<br>
-    <strong>Weekly Deposit:</strong> $${weekly}<br>
-    <strong>Build-up Yield:</strong> ${(buildRate*100).toFixed(2)}% monthly<br>
-    <strong>Weeks to Target:</strong> ${weeksToTarget} (${(weeksToTarget/4).toFixed(1)} months)<br>
-    <strong>Total Deposits:</strong> $${deposits.toFixed(2)}<br>
-    <strong>Total Yield (build-up):</strong> $${yields.toFixed(2)}<br>
-    <strong>Balance at Lock Start:</strong> $${balance.toFixed(2)}<br>
-    <strong>Lock Yield:</strong> ${(lockRate*100).toFixed(2)}% monthly<br>
-    <strong>Balance After ${lockMonths} Months:</strong> $${balanceAfterLock.toFixed(2)}</p>
+  // Stat cells
+  const stats = [
+    { label: 'Target Balance',          value: fmt(target),               cls: '' },
+    { label: 'Weeks to Target',         value: weeksToTarget + ' wks',   cls: 'gold' },
+    { label: 'Months to Target',        value: (weeksToTarget/4).toFixed(1) + ' mo', cls: '' },
+    { label: 'Build-up Yield Rate',     value: pct(buildRate) + ' / mo', cls: '' },
+    { label: 'Total Deposits',          value: fmt(deposits),             cls: '' },
+    { label: 'Total Build-up Yield',    value: fmt(yields),               cls: 'green' },
+    { label: 'Balance at Lock Start',   value: fmt(balance),              cls: '' },
+    { label: 'Lock Rate',               value: pct(lockRate) + ' / mo',  cls: 'navy' },
+    { label: `Balance After ${lockMonths} Mo`, value: fmt(balanceAfterLock), cls: 'gold highlight' },
+  ];
 
-    <p><strong>Savings Insight:</strong><br>
-    Yield covered ${(yields/deposits*100).toFixed(1)}% of your deposits.<br>
-    Yield made up ${(yields/target*100).toFixed(1)}% of your target balance.</p>
-  `;
+  const grid = document.getElementById('statGrid');
+  grid.innerHTML = stats.map(s => {
+    const cls = s.cls.includes('highlight') ? 'stat-cell highlight' : 'stat-cell';
+    const valCls = s.cls.replace('highlight','').trim();
+    return `<div class="${cls}">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value ${valCls}">${s.value}</div>
+    </div>`;
+  }).join('');
 
-  // Pie Chart
+  // Insight
+  document.getElementById('insightBlock').innerHTML = `<p>
+    Yield covered <strong>${(yields/deposits*100).toFixed(1)}%</strong> of your total deposits —
+    and accounted for <strong>${(yields/target*100).toFixed(1)}%</strong> of your target balance.
+    At a lock rate of <strong>${pct(lockRate)}</strong> monthly, your ${lockMonths}-month contract
+    projects a gain of <strong>${fmt(balanceAfterLock - balance)}</strong> above the lock entry balance.
+  </p>`;
+
+  // Pie chart
   const ctx = document.getElementById('pieChart').getContext('2d');
   if (window.myPie) window.myPie.destroy();
   window.myPie = new Chart(ctx, {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-      labels: [
-        `Deposits (${depositsPct.toFixed(1)}%)`,
-        `Yield (${yieldsPct.toFixed(1)}%)`
-      ],
+      labels: ['Deposits', 'Yield'],
       datasets: [{
         data: [deposits, yields],
-        backgroundColor: ['#0ea5e9','#10b981']
+        backgroundColor: ['#2a4f8a', '#8a6a2a'],
+        borderColor: '#f9f8f6',
+        borderWidth: 3,
+        hoverOffset: 6,
       }]
     },
     options: {
-      plugins: { legend: { position: 'bottom' } }
+      cutout: '62%',
+      plugins: { legend: { display: false } },
+      animation: { animateRotate: true, duration: 700 }
     }
   });
+
+  // Legend
+  document.getElementById('chartLegend').innerHTML = `
+    <div class="legend-row">
+      <div class="legend-dot" style="background:#2a4f8a"></div>
+      <span class="legend-label">Deposits</span>
+      <span class="legend-val">${fmt(deposits)} &mdash; ${depositsPct.toFixed(1)}%</span>
+    </div>
+    <div class="legend-row">
+      <div class="legend-dot" style="background:#8a6a2a"></div>
+      <span class="legend-label">Build-up Yield</span>
+      <span class="legend-val">${fmt(yields)} &mdash; ${yieldsPct.toFixed(1)}%</span>
+    </div>
+  `;
+
+  // Show results
+  const sec = document.getElementById('resultsSection');
+  sec.classList.remove('visible');
+  void sec.offsetWidth; // reflow to re-trigger animation
+  sec.classList.add('visible');
 }
 </script>
 </body>
