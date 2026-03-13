@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bayfall Morrigan – Scale-In Simulator</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    h1 { margin-top: 0; font-size: 22px; }
+    label { display: block; margin-top: 12px; font-size: 14px; }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+    }
+    button {
+      background: #0ea5e9;
+      color: #fff;
+      margin-top: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .results {
+      margin-top: 20px;
+      padding: 16px;
+      background: #0f172a;
+      border-radius: 8px;
+    }
+    canvas { margin-top: 20px; background: #0f172a; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Scale-In Account Simulator</h1>
+
+    <label>Target Balance ($)</label>
+    <input id="targetBalance" type="number" value="4500">
+
+    <label>Weekly Deposit ($)</label>
+    <input id="weeklyDeposit" type="number" value="150">
+
+    <label>Lock Term</label>
+    <select id="lockTerm">
+      <option value="3">3 Months</option>
+      <option value="6" selected>6 Months</option>
+      <option value="12">12 Months</option>
+    </select>
+
+    <button onclick="runSimulation()">Run Simulation</button>
+
+    <div class="results" id="resultsBox">
+      <p>Enter values and run the simulation.</p>
+    </div>
+
+    <canvas id="pieChart" height="180"></canvas>
+  </div>
+
+<script>
+/* --- Build-up yield brackets (monthly) --- */
+function getBuildRate(target, weekly) {
+  const weeklyPct = (weekly / target) * 100;
+
+  if (weeklyPct >= 10) return 0.04;    // 4.0% monthly
+  if (weeklyPct >= 5)  return 0.032;   // 3.2% monthly
+  if (weeklyPct >= 2)  return 0.024;   // 2.4% monthly
+  if (weeklyPct >= 0.75) return 0.016; // 1.6% monthly
+  return 0.01; // 1.0% monthly
+}
+
+/* --- Lock contract yield (monthly) --- */
+function getScaleInLockYield(lockTermMonths, weeksToTarget) {
+  const baseRates = {3: 0.05, 6: 0.065, 12: 0.08}; // monthly base yields
+  const base = baseRates[lockTermMonths] ?? 0.06;
+
+  const maxBoost = 0.03;        // +3% monthly max
+  const fullBoostWeeks = 54;    // 1 year to unlock full boost
+
+  const progress = Math.min(weeksToTarget / fullBoostWeeks, 1);
+  const boost = maxBoost * progress;
+
+  return base + boost; // final monthly yield
+}
+
+/* --- Main Simulation --- */
+function runSimulation() {
+  const target = parseFloat(document.getElementById('targetBalance').value);
+  const weekly = parseFloat(document.getElementById('weeklyDeposit').value);
+  const lockMonths = parseInt(document.getElementById('lockTerm').value);
+
+  if (!target || !weekly) {
+    alert("Enter valid numbers.");
+    return;
+  }
+
+  const buildRate = getBuildRate(target, weekly); // monthly
+  let balance = 0, deposits = 0, yields = 0, week = 0;
+
+  while (balance < target && week < 520) {
+    week++;
+    if (balance + weekly <= target * 1.01) {
+      balance += weekly;
+      deposits += weekly;
+    }
+    if (week % 4 === 0) {
+      const yieldAmt = balance * buildRate;
+      balance += yieldAmt;
+      yields += yieldAmt;
+    }
+  }
+
+  const weeksToTarget = week;
+  const lockRate = getScaleInLockYield(lockMonths, weeksToTarget);
+
+  let balanceAfterLock = balance;
+  for (let m = 0; m < lockMonths; m++) {
+    const yieldAmt = balanceAfterLock * lockRate;
+    balanceAfterLock += yieldAmt;
+  }
+
+  const depositsPct = (deposits / balance) * 100;
+  const yieldsPct = (yields / balance) * 100;
+
+  // Summary
+  const res = document.getElementById("resultsBox");
+  res.innerHTML = `
+    <p><strong>Target:</strong> $${target.toLocaleString()}<br>
+    <strong>Weekly Deposit:</strong> $${weekly}<br>
+    <strong>Build-up Yield:</strong> ${(buildRate*100).toFixed(2)}% monthly<br>
+    <strong>Weeks to Target:</strong> ${weeksToTarget} (${(weeksToTarget/4).toFixed(1)} months)<br>
+    <strong>Total Deposits:</strong> $${deposits.toFixed(2)}<br>
+    <strong>Total Yield (build-up):</strong> $${yields.toFixed(2)}<br>
+    <strong>Balance at Lock Start:</strong> $${balance.toFixed(2)}<br>
+    <strong>Lock Yield:</strong> ${(lockRate*100).toFixed(2)}% monthly<br>
+    <strong>Balance After ${lockMonths} Months:</strong> $${balanceAfterLock.toFixed(2)}</p>
+
+    <p><strong>Savings Insight:</strong><br>
+    Yield covered ${(yields/deposits*100).toFixed(1)}% of your deposits.<br>
+    Yield made up ${(yields/target*100).toFixed(1)}% of your target balance.</p>
+  `;
+
+  // Pie Chart
+  const ctx = document.getElementById('pieChart').getContext('2d');
+  if (window.myPie) window.myPie.destroy();
+  window.myPie = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: [
+        `Deposits (${depositsPct.toFixed(1)}%)`,
+        `Yield (${yieldsPct.toFixed(1)}%)`
+      ],
+      datasets: [{
+        data: [deposits, yields],
+        backgroundColor: ['#0ea5e9','#10b981']
+      }]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+</script>
+</body>
+</html>
